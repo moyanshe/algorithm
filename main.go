@@ -1,9 +1,11 @@
 package main
 
 import (
-  "fmt"
+	"algorithm/classics"
+	"fmt"
 )
 
 func main() {
-  fmt.Println("hello algorithm!")
+	values := []int{3, 5, 4, 1, 6, 9, 8, 7}
+	fmt.Println(classics.BubbleAsort(values))
 }
