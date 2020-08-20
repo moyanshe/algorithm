@@ -1,14 +1,16 @@
 package hashring
 
 import (
+	"fmt"
 	"hash/crc32"
+	"math"
 	"sort"
 	"strconv"
 	"sync"
 )
 
 // defaultReplicas 虚拟节点数量
-const DEFAULT_REPLICAS = 260
+const DEFAULT_REPLICAS = 100
 
 // HashRing 哈希环
 type HashRing []uint32
@@ -25,6 +27,7 @@ func (c HashRing) Swap(i, j int) {
 	c[i], c[j] = c[j], c[i]
 }
 
+// Node 物理节点定义
 type Node struct {
 	Id       int
 	Ip       string
@@ -33,6 +36,7 @@ type Node struct {
 	Weight   int
 }
 
+// NewNode 生成新的物理节点
 func NewNode(id int, ip string, port int, name string, weight int) *Node {
 	return &Node{
 		Id:       id,
@@ -43,6 +47,7 @@ func NewNode(id int, ip string, port int, name string, weight int) *Node {
 	}
 }
 
+// Consistent 哈希环结构定义
 type Consistent struct {
 	Nodes     map[uint32]Node
 	numReps   int
@@ -51,15 +56,33 @@ type Consistent struct {
 	sync.RWMutex
 }
 
-func NewConsistent() *Consistent {
-	return &Consistent{
+// NewConsistent 生成新的Consistent
+func NewConsistent(opts ...Option) *Consistent {
+	obj := &Consistent{
 		Nodes:     make(map[uint32]Node),
 		numReps:   DEFAULT_REPLICAS,
 		Resources: make(map[int]bool),
 		ring:      HashRing{},
 	}
+
+	for _, opt := range opts {
+		opt(obj)
+	}
+
+	return obj
 }
 
+// Option 选项模式
+type Option func(consistent *Consistent)
+
+// WithReplicas 虚拟节点数量
+func WithReplicas(num int) Option {
+	return func(consistent *Consistent) {
+		consistent.numReps = num
+	}
+}
+
+// Add 添加物理节点
 func (c *Consistent) Add(node *Node) bool {
 	c.Lock()
 	defer c.Unlock()
@@ -137,4 +160,21 @@ func (c *Consistent) Remove(node *Node) {
 		delete(c.Nodes, c.hashStr(str))
 	}
 	c.sortHashRing()
+}
+
+// GetStandardDeviation 计算标准差
+func GetStandardDeviation(numbers ...int) float64 {
+	total1 := 0
+	for _, val := range numbers {
+		total1 += val
+	}
+
+	avg := int(total1 / len(numbers))
+	fmt.Println("avg:", avg, "len:", len(numbers))
+	total2 := 0
+	for _, val := range numbers {
+		total2 += (val - avg) * (val - avg)
+	}
+	avg1 := float64(total2 / len(numbers))
+	return math.Sqrt(avg1)
 }
